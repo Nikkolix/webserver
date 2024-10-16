@@ -211,12 +211,16 @@ func NewURLBodyHandler[T any](webServer *WebServer, handler func(http.ResponseWr
 
 			dst := reflect.New(field.Type)
 
+			if field.Type.Kind() == reflect.String {
+				value = "\"" + value + "\""
+			}
+
 			err := json.Unmarshal([]byte(value), dst.Interface())
 			if err != nil {
 				panic(err)
 			}
-			
-			v.Field(i).Set(dst)
+
+			v.Field(i).Set(dst.Elem())
 		}
 
 		handler(rw, req, values)
