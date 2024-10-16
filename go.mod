@@ -1,4 +1,4 @@
-module webserver
+module github.com/Nikkolix/webserver
 
 go 1.22.0
 
