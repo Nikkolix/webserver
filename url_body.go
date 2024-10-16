@@ -2,10 +2,12 @@ package webserver
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/a-h/templ"
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 )
 
@@ -119,7 +121,7 @@ func (c CustomParameter[T]) Value(value string) any {
 	return c.value(value)
 }
 
-// handler
+// handler parameter implementation
 
 func (webServer *WebServer) NewHandlerURLBody(method HTTPMethod, pattern string, handler func(http.ResponseWriter, *http.Request, map[string]any), parameters ...Parameter) {
 	webServer.NewHandler(method, pattern, func(rw http.ResponseWriter, req *http.Request) {
@@ -161,6 +163,66 @@ func (webServer *WebServer) NewHandlerURLBody(method HTTPMethod, pattern string,
 
 		handler(rw, req, values)
 	})
+}
+
+// handler struct implementation
+
+// method HTTPMethod, pattern string,
+
+type URLBodyHandler struct {
+	handle func(rw http.ResponseWriter, req *http.Request)
+}
+
+func NewURLBodyHandler[T any](webServer *WebServer, handler func(http.ResponseWriter, *http.Request, T)) *URLBodyHandler {
+	if reflect.TypeFor[T]().Kind() != reflect.Struct {
+		panic("T must be a struct")
+	}
+
+	out := new(URLBodyHandler)
+
+	out.handle = func(rw http.ResponseWriter, req *http.Request) {
+		bodyData, err := io.ReadAll(req.Body)
+		if err != nil {
+			webServer.settings.Logger.Fatalln(err)
+		}
+
+		err = req.Body.Close()
+		if err != nil {
+			webServer.settings.Logger.Fatalln(err)
+		}
+
+		query, err := url.ParseQuery(string(bodyData))
+		if err != nil {
+			webServer.settings.Logger.Fatalln(err)
+		}
+
+		var values T
+
+		t := reflect.TypeFor[T]()
+		v := reflect.ValueOf(values)
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+
+			if !field.IsExported() {
+				continue
+			}
+
+			value := query.Get(field.Name)
+
+			err := json.Unmarshal([]byte(value), v.Field(i).Addr().Interface())
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		handler(rw, req, values)
+	}
+
+	return out
+}
+
+func (h URLBodyHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	h.handle(rw, req)
 }
 
 // helper todo move elsewhere

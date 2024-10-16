@@ -294,6 +294,10 @@ func (webServer *WebServer) NewHandlerBody(method HTTPMethod, pattern string, ha
 	})
 }
 
+func (webServer *WebServer) NewHandlerInterface(method HTTPMethod, pattern string, handler http.Handler) {
+	webServer.NewHandler(method, pattern, handler.ServeHTTP)
+}
+
 // bool return value is for running next middleware/handler
 func (webServer *WebServer) NewMiddleware(m func(http.ResponseWriter, *http.Request) bool) {
 	webServer.middleware = append(webServer.middleware, m)
