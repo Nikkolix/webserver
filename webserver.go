@@ -254,7 +254,7 @@ func NewWebServer(settings Settings) *WebServer {
 	return webServer
 }
 
-func (webServer *WebServer) NewHandler(method HTTPMethod, pattern string, handler func(http.ResponseWriter, *http.Request)) {
+func (webServer *WebServer) NewHandleFunc(method HTTPMethod, pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	switch method {
 	case http.MethodGet:
 		webServer.getMux.HandleFunc(pattern, handler)
@@ -280,7 +280,7 @@ func (webServer *WebServer) NewHandler(method HTTPMethod, pattern string, handle
 }
 
 func (webServer *WebServer) NewHandlerBody(method HTTPMethod, pattern string, handler func(http.ResponseWriter, *http.Request, []byte)) {
-	webServer.NewHandler(method, pattern, func(rw http.ResponseWriter, req *http.Request) {
+	webServer.NewHandleFunc(method, pattern, func(rw http.ResponseWriter, req *http.Request) {
 		bodyData, err := io.ReadAll(req.Body)
 		if err != nil {
 			panic(err)
@@ -294,11 +294,32 @@ func (webServer *WebServer) NewHandlerBody(method HTTPMethod, pattern string, ha
 	})
 }
 
-func (webServer *WebServer) NewHandlerInterface(method HTTPMethod, pattern string, handler http.Handler) {
-	webServer.NewHandler(method, pattern, handler.ServeHTTP)
+func (webServer *WebServer) NewHandler(method HTTPMethod, pattern string, handler http.Handler) {
+	switch method {
+	case http.MethodGet:
+		webServer.getMux.Handle(pattern, handler)
+	case http.MethodHead:
+		webServer.headMux.Handle(pattern, handler)
+	case http.MethodPost:
+		webServer.postMux.Handle(pattern, handler)
+	case http.MethodPut:
+		webServer.putMux.Handle(pattern, handler)
+	case http.MethodPatch:
+		webServer.patchMux.Handle(pattern, handler)
+	case http.MethodDelete:
+		webServer.deleteMux.Handle(pattern, handler)
+	case http.MethodConnect:
+		webServer.connectMux.Handle(pattern, handler)
+	case http.MethodOptions:
+		webServer.optionsMux.Handle(pattern, handler)
+	case http.MethodTrace:
+		webServer.traceMux.Handle(pattern, handler)
+	default:
+		webServer.customMux.Handle(pattern, handler)
+	}
 }
 
-// bool return value is for running next middleware/handler
+// NewMiddleware return value is for deciding to run next middleware/handler
 func (webServer *WebServer) NewMiddleware(m func(http.ResponseWriter, *http.Request) bool) {
 	webServer.middleware = append(webServer.middleware, m)
 }
