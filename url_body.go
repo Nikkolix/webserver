@@ -196,10 +196,10 @@ func NewURLBodyHandler[T any](webServer *WebServer, handler func(http.ResponseWr
 			webServer.settings.Logger.Fatalln(err)
 		}
 
-		var values T
+		values := new(T)
 
 		t := reflect.TypeFor[T]()
-		v := reflect.ValueOf(values)
+		v := reflect.ValueOf(values).Elem()
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
 
@@ -223,7 +223,7 @@ func NewURLBodyHandler[T any](webServer *WebServer, handler func(http.ResponseWr
 			v.Field(i).Set(dst.Elem())
 		}
 
-		handler(rw, req, values)
+		handler(rw, req, *values)
 	}
 
 	return out
