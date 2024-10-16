@@ -7,19 +7,20 @@ import (
 
 func TestNewWebServer(t *testing.T) {
 	settings := Settings{
-		UseHttps:        true,
-		UseHttpRedirect: true,
-		Hostname:        "localhost",
-		HttpPort:        "80",
-		HttpsPort:       "443",
-		Root:            "root",
-		Logger:          nil,
-		CertFile:        "./ssl/certificate.crt",
-		KeyFile:         "./ssl/privatekey.key",
+		UseHttps:         true,
+		UseHttpRedirect:  true,
+		Hostname:         "localhost",
+		HttpPort:         "80",
+		HttpsPort:        "443",
+		Root:             "root",
+		Logger:           nil,
+		CertFile:         "./ssl/certificate.crt",
+		KeyFile:          "./ssl/privatekey.key",
+		FallbackRedirect: "/index",
 	}
 	webServer := NewWebServer(settings)
 
-	webServer.NewHandlerBody(http.MethodPost, "/doors", func(rw http.ResponseWriter, req *http.Request, body []byte) {
+	webServer.NewHandlerURLBody(http.MethodGet, "/index", func(rw http.ResponseWriter, req *http.Request, values map[string]any) {
 
 	})
 
