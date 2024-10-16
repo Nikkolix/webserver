@@ -13,17 +13,15 @@ func TestNewWebServer(t *testing.T) {
 		HttpPort:        "80",
 		HttpsPort:       "443",
 		Root:            "root",
-		IndexHtml:       "index.html",
-		FallbackHtml:    "index.html",
 		Logger:          nil,
 		CertFile:        "./ssl/certificate.crt",
-		KeyFile:         "./ssl/key.key",
+		KeyFile:         "./ssl/privatekey.key",
 	}
 	webServer := NewWebServer(settings)
 
 	webServer.NewHandlerBody(http.MethodPost, "/doors", func(rw http.ResponseWriter, req *http.Request, body []byte) {
 
-	}, 1_000_000)
+	})
 
 	err := webServer.Run()
 	if err != nil {
