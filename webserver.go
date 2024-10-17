@@ -368,7 +368,11 @@ func (webServer *WebServer) Run() error {
 //private
 
 func (webServer *WebServer) fallbackRedirect(rw http.ResponseWriter, req *http.Request) {
-	url := "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + webServer.settings.FallbackRedirect
+	url := "http://" + webServer.settings.Hostname + ":" + webServer.settings.HttpPort + webServer.settings.FallbackRedirect
+	if webServer.settings.UseHttps {
+		url = "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + webServer.settings.FallbackRedirect
+
+	}
 	http.Redirect(rw, req, url, http.StatusTemporaryRedirect)
 	webServer.settings.Logger.Println("Fallback Redirect to " + url)
 }
