@@ -20,8 +20,12 @@ func TestNewWebServer(t *testing.T) {
 	}
 	webServer := NewWebServer(settings)
 
-	webServer.NewHandlerURLBody(http.MethodGet, "/index", func(rw http.ResponseWriter, req *http.Request, values map[string]any) {
-
+	webServer.NewHandleFunc(http.MethodGet, "/index", func(rw http.ResponseWriter, req *http.Request) {
+		rw.WriteHeader(http.StatusOK)
+		_, err := rw.Write([]byte("Hello World"))
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	err := webServer.Run()

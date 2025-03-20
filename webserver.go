@@ -2,12 +2,14 @@ package webserver
 
 import (
 	"errors"
-	"golang.org/x/exp/slices"
 	"io"
 	"io/fs"
 	"log"
+	"mime"
 	"net/http"
+	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -26,171 +28,92 @@ const (
 	HTTPMethodTrace   HTTPMethod = http.MethodTrace
 )
 
-//helper
-
-func getMimeType(fileExtension string) string {
-	switch strings.ToLower(fileExtension) {
-	case "aac":
-		return "audio/aac"
-	case "abw":
-		return "application/x-abiword"
-	case "arc":
-		return "application/x-freearc"
-	case "avif":
-		return "image/avif"
-	case "avi":
-		return "video/x-msvideo"
-	case "azw":
-		return "application/vnd.amazon.ebook"
-	case "bin":
-		return "application/octet-stream"
-	case "bmp":
-		return "image/bmp"
-	case "bz":
-		return "application/x-bzip"
-	case "bz2":
-		return "application/x-bzip2"
-	case "cda":
-		return "application/x-cdf"
-	case "csh":
-		return "application/x-csh"
-	case "css":
-		return "text/css"
-	case "csv":
-		return "text/csv"
-	case "doc":
-		return "application/msword"
-	case "docx":
-		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	case "eot":
-		return "application/vnd.ms-fontobject"
-	case "epub":
-		return "application/epub+zip"
-	case "gz":
-		return "application/gzip"
-	case "gif":
-		return "image/gif"
-	case "htm", "html":
-		return "text/html"
-	case "ico":
-		return "image/vnd.microsoft.icon"
-	case "ics":
-		return "text/calendar"
-	case "jar":
-		return "application/java-archive"
-	case "jpeg", "jpg":
-		return "image/jpeg"
-	case "js":
-		return "text/javascript"
-	case "json":
-		return "application/json"
-	case "jsonld":
-		return "application/ld+json"
-	case "mid", "midi":
-		return "audio/midi" //audio/x-midi
-	case "mjs":
-		return "text/javascript"
-	case "mp3":
-		return "audio/mpeg"
-	case "mp4":
-		return "video/mp4"
-	case "mpeg":
-		return "video/mpeg"
-	case "mpkg":
-		return "application/vnd.apple.installer+xml"
-	case "odp":
-		return "application/vnd.oasis.opendocument.presentation"
-	case "ods":
-		return "application/vnd.oasis.opendocument.spreadsheet"
-	case "odt":
-		return "application/vnd.oasis.opendocument.text"
-	case "oga":
-		return "audio/ogg"
-	case "ogv":
-		return "video/ogg"
-	case "ogx":
-		return "application/ogg"
-	case "opus":
-		return "audio/opus"
-	case "otf":
-		return "font/otf"
-	case "png":
-		return "image/png"
-	case "pdf":
-		return "application/pdf"
-	case "php":
-		return "application/x-httpd-php"
-	case "ppt":
-		return "application/vnd.ms-powerpoint"
-	case "pptx":
-		return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-	case "rar":
-		return "application/vnd.rar"
-	case "rtf":
-		return "application/rtf"
-	case "sh":
-		return "application/x-sh"
-	case "svg":
-		return "image/svg+xml"
-	case "tar":
-		return "application/x-tar"
-	case "tif", "tiff":
-		return "image/tiff"
-	case "ts":
-		return "video/mp2t"
-	case "ttf":
-		return "font/ttf"
-	case "txt":
-		return "text/plain"
-	case "vsd":
-		return "application/vnd.visio"
-	case "wav":
-		return "audio/wav"
-	case "weba":
-		return " audio/webm"
-	case "webm":
-		return "video/webm"
-	case "webp":
-		return "image/webp"
-	case "woff":
-		return "font/woff"
-	case "xhtml":
-		return "application/xhtml+xml"
-	case "xls":
-		return "application/vnd.ms-excel"
-	case "xlsx":
-		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	case "xml":
-		return "application/xml" // text/xml (old)
-	case "xul":
-		return "application/vnd.mozilla.xul+xml"
-	case "zip":
-		return "application/zip"
-	case "3gp":
-		return "video/3gpp" // audio/3gpp (only audio)
-	case "3g2":
-		return "video/3gpp2" // audio/3gpp2 (only audio)
-	case "7z":
-		return "application/x-7z-compressed"
-	default:
-		return "application/octet-stream"
+func init() {
+	extToType := map[string]string{
+		".aac":    "audio/aac",
+		".abw":    "application/x-abiword",
+		".arc":    "application/x-freearc",
+		".avif":   "image/avif",
+		".avi":    "video/x-msvideo",
+		".azw":    "application/vnd.amazon.ebook",
+		".bin":    "application/octet-stream",
+		".bmp":    "image/bmp",
+		".bz":     "application/x-bzip",
+		".bz2":    "application/x-bzip2",
+		".cda":    "application/x-cdf",
+		".csh":    "application/x-csh",
+		".css":    "text/css",
+		".csv":    "text/csv",
+		".doc":    "application/msword",
+		".docx":   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		".eot":    "application/vnd.ms-fontobject",
+		".epub":   "application/epub+zip",
+		".gz":     "application/gzip",
+		".gif":    "image/gif",
+		".htm":    "text/html",
+		".html":   "text/html",
+		".ico":    "image/vnd.microsoft.icon",
+		".ics":    "text/calendar",
+		".jar":    "application/java-archive",
+		".jpeg":   "image/jpeg",
+		".jpg":    "image/jpeg",
+		".js":     "text/javascript",
+		".json":   "application/json",
+		".jsonld": "application/ld+json",
+		".mid":    "audio/midi",
+		".midi":   "audio/midi",
+		".mjs":    "text/javascript",
+		".mp3":    "audio/mpeg",
+		".mp4":    "video/mp4",
+		".mpeg":   "video/mpeg",
+		".mpkg":   "application/vnd.apple.installer+xml",
+		".odp":    "application/vnd.oasis.opendocument.presentation",
+		".ods":    "application/vnd.oasis.opendocument.spreadsheet",
+		".odt":    "application/vnd.oasis.opendocument.text",
+		".oga":    "audio/ogg",
+		".ogv":    "video/ogg",
+		".ogx":    "application/ogg",
+		".opus":   "audio/opus",
+		".otf":    "font/otf",
+		".png":    "image/png",
+		".pdf":    "application/pdf",
+		".php":    "application/x-httpd-php",
+		".ppt":    "application/vnd.ms-powerpoint",
+		".pptx":   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		".rar":    "application/vnd.rar",
+		".rtf":    "application/rtf",
+		".sh":     "application/x-sh",
+		".svg":    "image/svg+xml",
+		".tar":    "application/x-tar",
+		".tif":    "image/tiff",
+		".tiff":   "image/tiff",
+		".ts":     "video/mp2t",
+		".ttf":    "font/ttf",
+		".txt":    "text/plain",
+		".vsd":    "application/vnd.visio",
+		".wav":    "audio/wav",
+		".weba":   "audio/webm",
+		".webm":   "video/webm",
+		".webp":   "image/webp",
+		".woff":   "font/woff",
+		".xhtml":  "application/xhtml+xml",
+		".xls":    "application/vnd.ms-excel",
+		".xlsx":   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		".xml":    "application/xml",
+		".xul":    "application/vnd.mozilla.xul+xml",
+		".zip":    "application/zip",
+		".3gp":    "video/3gpp",
+		".3g2":    "video/3gpp2",
+		".7z":     "application/x-7z-compressed",
 	}
-}
 
-func urlJoin(parts ...string) string {
-	out := "./"
-	for _, part := range parts {
-		segments := strings.Split(part, "/")
-		for _, segment := range segments {
-			if segment != "" {
-				out += segment + "/"
-			}
+	for ext, mimeType := range extToType {
+		err := mime.AddExtensionType(ext, mimeType)
+		if err != nil {
+			panic(err)
 		}
 	}
-	return out[:len(out)-1]
 }
-
-//helper end
 
 //public
 
@@ -319,7 +242,6 @@ func (webServer *WebServer) NewHandler(method HTTPMethod, pattern string, handle
 	}
 }
 
-// NewMiddleware return value is for deciding to run next middleware/handler
 func (webServer *WebServer) NewMiddleware(m func(http.ResponseWriter, *http.Request) bool) {
 	webServer.middleware = append(webServer.middleware, m)
 }
@@ -342,9 +264,9 @@ func (webServer *WebServer) Run() error {
 		if webServer.settings.UseHttpRedirect {
 			m := http.NewServeMux()
 			m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				url := "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + r.URL.Path
-				http.Redirect(w, r, url, http.StatusMovedPermanently)
-				webServer.settings.Logger.Println("Redirect: http to https 301 to " + url)
+				urlPath := "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + r.URL.Path
+				http.Redirect(w, r, urlPath, http.StatusMovedPermanently)
+				webServer.settings.Logger.Println("Redirect: http to https 301 to " + urlPath)
 			})
 			s := http.Server{
 				Addr:    ":" + "80",
@@ -368,13 +290,13 @@ func (webServer *WebServer) Run() error {
 //private
 
 func (webServer *WebServer) fallbackRedirect(rw http.ResponseWriter, req *http.Request) {
-	url := "http://" + webServer.settings.Hostname + ":" + webServer.settings.HttpPort + webServer.settings.FallbackRedirect
+	urlPath := "http://" + webServer.settings.Hostname + ":" + webServer.settings.HttpPort + webServer.settings.FallbackRedirect
 	if webServer.settings.UseHttps {
-		url = "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + webServer.settings.FallbackRedirect
+		urlPath = "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + webServer.settings.FallbackRedirect
 
 	}
-	http.Redirect(rw, req, url, http.StatusTemporaryRedirect)
-	webServer.settings.Logger.Println("Fallback Redirect to " + url)
+	http.Redirect(rw, req, urlPath, http.StatusTemporaryRedirect)
+	webServer.settings.Logger.Println("Fallback Redirect to " + urlPath)
 }
 
 func (webServer *WebServer) fileHandler(rw http.ResponseWriter, req *http.Request) {
@@ -388,7 +310,14 @@ func (webServer *WebServer) fileHandler(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	file, err := os.ReadFile(urlJoin(webServer.settings.Root, path))
+	joinPath, err := url.JoinPath(webServer.settings.Root, path)
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		webServer.settings.Logger.Println("File Handler: 500: can't join root " + webServer.settings.Root + " and path " + path)
+		return
+	}
+
+	file, err := os.ReadFile(joinPath)
 	if err != nil {
 		var pathError *fs.PathError
 		if errors.As(err, &pathError) {
@@ -410,7 +339,7 @@ func (webServer *WebServer) fileHandler(rw http.ResponseWriter, req *http.Reques
 		}
 	}
 
-	rw.Header().Set("Content-Type", getMimeType(fileExtension))
+	rw.Header().Set("Content-Type", mime.TypeByExtension("."+fileExtension))
 	rw.WriteHeader(http.StatusOK)
 	bytes, err := rw.Write(file)
 	if err != nil {
