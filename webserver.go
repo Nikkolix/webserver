@@ -143,6 +143,8 @@ type WebServer struct {
 func NewWebServer(settings Settings) *WebServer {
 	mux := http.NewServeMux()
 
+	fmt.Println("init server:", settings.BindAddr())
+
 	webServer := &WebServer{
 		server: &http.Server{
 			Handler: mux,
