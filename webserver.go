@@ -146,7 +146,7 @@ func NewWebServer(settings Settings) *WebServer {
 	webServer := &WebServer{
 		server: &http.Server{
 			Handler: mux,
-			Addr:    settings.Addr(),
+			Addr:    settings.BindAddr(),
 		},
 		mux: mux,
 

@@ -9,7 +9,8 @@ import (
 type Settings struct {
 	UseHttps         bool
 	UseHttpRedirect  bool
-	Hostname         string
+	Domain         string
+	Bind string
 	HttpPort         string
 	HttpsPort        string
 	Root             string
@@ -23,7 +24,8 @@ func NewSettings() *Settings {
 	return &Settings{
 		UseHttps:         false,
 		UseHttpRedirect:  false,
-		Hostname:         "localhost",
+		Domain:         "localhost",
+Bind: "0,0,0,0",
 		HttpPort:         "80",
 		HttpsPort:        "443",
 		Root:             "/",
@@ -73,7 +75,11 @@ func (s *Settings) Port() string {
 }
 
 func (s *Settings) Addr() string {
-	return s.Hostname + ":" + s.Port()
+	return s.Domain + ":" + s.Port()
+}
+
+func (s *Settings) BindAddr() string {
+	return s.Bind + ":" + s.Port()
 }
 
 func (s *Settings) Url() string {
@@ -81,9 +87,9 @@ func (s *Settings) Url() string {
 }
 
 func (s *Settings) UrlHttps() string {
-	return "https://" + s.Hostname + ":" + s.HttpsPort
+	return "https://" + s.Domain + ":" + s.HttpsPort
 }
 
 func (s *Settings) UrlHttp() string {
-	return "http://" + s.Hostname + ":" + s.HttpPort
+	return "http://" + s.Domain + ":" + s.HttpPort
 }
