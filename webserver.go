@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"fmt"
 )
 
 type HTTPMethod string
