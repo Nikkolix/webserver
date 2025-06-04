@@ -264,7 +264,7 @@ func (webServer *WebServer) Run() error {
 		if webServer.settings.UseHttpRedirect {
 			m := http.NewServeMux()
 			m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				urlPath := "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + r.URL.Path
+				urlPath := "https://" + webServer.settings.Domain + ":" + webServer.settings.HttpsPort + r.URL.Path
 				http.Redirect(w, r, urlPath, http.StatusMovedPermanently)
 				webServer.settings.Logger.Println("Redirect: http to https 301 to " + urlPath)
 			})
@@ -290,9 +290,9 @@ func (webServer *WebServer) Run() error {
 //private
 
 func (webServer *WebServer) fallbackRedirect(rw http.ResponseWriter, req *http.Request) {
-	urlPath := "http://" + webServer.settings.Hostname + ":" + webServer.settings.HttpPort + webServer.settings.FallbackRedirect
+	urlPath := "http://" + webServer.settings.Domain + ":" + webServer.settings.HttpPort + webServer.settings.FallbackRedirect
 	if webServer.settings.UseHttps {
-		urlPath = "https://" + webServer.settings.Hostname + ":" + webServer.settings.HttpsPort + webServer.settings.FallbackRedirect
+		urlPath = "https://" + webServer.settings.Domain + ":" + webServer.settings.HttpsPort + webServer.settings.FallbackRedirect
 
 	}
 	http.Redirect(rw, req, urlPath, http.StatusTemporaryRedirect)
