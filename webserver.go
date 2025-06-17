@@ -12,7 +12,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"fmt"
 )
 
 type HTTPMethod string
@@ -144,8 +143,6 @@ type WebServer struct {
 func NewWebServer(settings Settings) *WebServer {
 	mux := http.NewServeMux()
 
-	fmt.Println("init server:", settings.BindAddr())
-
 	webServer := &WebServer{
 		server: &http.Server{
 			Handler: mux,
@@ -270,6 +267,9 @@ func (webServer *WebServer) Run() error {
 				urlPath := "https://" + webServer.settings.Domain + ":" + webServer.settings.HttpsPort + r.URL.Path
 				http.Redirect(w, r, urlPath, http.StatusMovedPermanently)
 				webServer.settings.Logger.Println("Redirect: http to https 301 to " + urlPath)
+				webServer.settings.Logger.Println("ContentLength:", r.ContentLength)
+				webServer.settings.Logger.Println("Host:", r.Host)
+				webServer.settings.Logger.Println("RemoteAddr:", r.RemoteAddr)
 			})
 			s := http.Server{
 				Addr:    ":" + "80",
@@ -282,9 +282,11 @@ func (webServer *WebServer) Run() error {
 				}
 			}()
 		}
+		webServer.settings.Logger.Println("Server Bind:", webServer.server.Addr)
 		webServer.settings.Logger.Println("WebServer running on " + webServer.settings.Url())
 		return webServer.server.ListenAndServeTLS(webServer.settings.CertFile, webServer.settings.KeyFile)
 	} else {
+		webServer.settings.Logger.Println("Server Bind:", webServer.server.Addr)
 		webServer.settings.Logger.Println("WebServer running on " + webServer.settings.Url())
 		return webServer.server.ListenAndServe()
 	}
